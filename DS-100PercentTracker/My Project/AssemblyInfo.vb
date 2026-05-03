@@ -8,11 +8,11 @@ Imports System.Runtime.InteropServices
 
 ' Review the values of the assembly attributes
 
-<Assembly: AssemblyTitle("DS-100PercentTracker")>
-<Assembly: AssemblyDescription("")>
+<Assembly: AssemblyTitle("Dark Souls Remastered 100% Tracker")>
+<Assembly: AssemblyDescription("100% speedrun tracker for Dark Souls Remastered")>
 <Assembly: AssemblyCompany("")>
-<Assembly: AssemblyProduct("DS-100PercentTracker")>
-<Assembly: AssemblyCopyright("Copyright ©  2017")>
+<Assembly: AssemblyProduct("Dark Souls Remastered 100% Tracker")>
+<Assembly: AssemblyCopyright("Copyright © 2026")>
 <Assembly: AssemblyTrademark("")>
 
 <Assembly: ComVisible(False)>

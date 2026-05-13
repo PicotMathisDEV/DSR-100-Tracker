@@ -10,8 +10,8 @@ Public Class Game
                                     51010130, 51010370, 51010430, 51010440, 51010470, 51010480, 51010490, 51010500, 51010510, 51010520,
                                     51010220, 51010260, 51010280, 51010300, 51010450, 51010460, 51020000, 51020010, 51020020, 51020030,
                                     51020040, 51020050, 51020060, 51020150, 51020160, 51020090, 51020170, 51020110, 51020120, 51020130,
-                                    51020140, 51020210, 50001030, 51020070, 51020180, 51020190, 51020200, 51100010, 51100020, 51100030,
-                                    51100040, 51100060, 51100070, 51100090, 51100100, 51100120, 51100130, 51100140, 51100150, 51100160,
+                                    51020140, 51020210, 50001030, 51020070, 51020180, 51020190, 51020200, 51100010, 51100030,
+                                    51100040, 51100050, 51100060, 51100070, 51100090, 51100100, 51100120, 51100130, 51100140, 51100150, 51100160,
                                     51100170, 51100190, 51100200, 51100210, 51100230, 51100240, 51100250, 51100260, 51100280, 51100290,
                                     51100300, 51100310, 51100320, 51100330, 51100340, 51100350, 51100370, 51100500, 51200030, 51200010,
                                     51200020, 51200040, 51200060, 51200070, 51200080, 51200180, 51200120, 51200150, 51200160, 51200170,
@@ -88,7 +88,9 @@ Public Class Game
                                         1811960, 1201961, 1211964, 1211962, 1211961, 1211963, 1211950, 1411964, 1411963, 1411962,
                                         1411961, 1411960, 1411950, 1401962, 1401961, 1401960, 1321962, 1321961, 1321960, 1101960,
                                         1511950, 1511960, 1511961, 1511962, 1701950, 1701960, 1701961, 1701962, 1001960, 1501961,
-                                        1311950, 1311960, 1311961}
+                                        1311950, 1311960, 1311961, 1302962}
+
+
 
 
     Shared bossesKilled As Integer
@@ -147,9 +149,6 @@ Public Class Game
     End Sub
 
     Private Shared Sub updateFullyKindledBonfires()
-        ' Structure from SoulSplitter/SoulMemory (FrankvdStam):
-        ' netBonfireDb + 0x28 → element header → +0x0 → node → +0x10 → item
-        ' item + 0x8 = bonfireID, item + 0xC = kindleState (40 = fully kindled)
         Dim netBonfireDb = GetNetBonfireDbPtr()
         If netBonfireDb = IntPtr.Zero Then Return
 
@@ -182,12 +181,15 @@ Public Class Game
         itemsPickedUp = 0
 
         For Each item In totalItemFlags
+            Dim originalItem = item
             If Dictionaries.sharedTreasureLocationItems.ContainsKey(item) Then
                 Dim values = Dictionaries.sharedTreasureLocationItems.Item(item)
                 item = values(values.Length - 1)
             End If
             value = GetEventFlagState(item)
-            If value = True Then itemsPickedUp += 1
+            If value = True Then
+                itemsPickedUp += 1
+            End If
         Next
 
         Dim startingClass = GetPlayerStartingClass()
@@ -195,7 +197,9 @@ Public Class Game
             Dim startingItemFlags = Dictionaries.startingClassItems.Item(startingClass)
             For Each item In startingItemFlags
                 value = GetEventFlagState(item)
-                If value = True Then itemsPickedUp += 1
+                If value = True Then
+                    itemsPickedUp += 1
+                End If
             Next
             totalTreasureLocationsCount += startingItemFlags.Length
         End If
@@ -206,7 +210,10 @@ Public Class Game
                 totalTreasureLocationsCount += 1
                 Dim item = pair.Value(pair.Value.Length - 1)
                 value = GetEventFlagState(item)
-                If value = True Then itemsPickedUp += 1
+                If value = True Then
+                    itemsPickedUp += 1
+
+                End If
             End If
         Next
     End Sub
@@ -318,7 +325,6 @@ Public Class Game
         totalCompletionPercentage /= 10
     End Sub
 
-    ' Returns Long (64-bit) — DSR uses 64-bit addresses
     Public Shared Function GetEventFlagAddress(eventID As Integer, ByRef mask As UInteger) As Long
         Dim idString As String = eventID.ToString("D8")
         If idString.Length = 8 Then
@@ -334,7 +340,7 @@ Public Class Game
                 offset += (number - (number Mod 32)) / 8
 
                 mask = &H80000000UI >> (number Mod 32)
-                Return eventFlagPtr + offset  ' eventFlagPtr is Long, result is Long
+                Return eventFlagPtr + offset
             End If
         End If
 
@@ -349,33 +355,27 @@ Public Class Game
 
     Public Shared Function IsPlayerLoaded() As Boolean
         Dim worldChrMan = GetOnlineInfoPtr()
-        ' If WorldChrMan not found, assume loaded (can't block on loading screens)
         If worldChrMan = IntPtr.Zero Then Return True
         Return RInt64(worldChrMan + &H68) <> 0
     End Function
 
     Public Shared Function isPlayerInOwnWorld() As Boolean
-        ' Use eventFlagPtr as proxy — if it's valid the game is running
         Return eventFlagPtr <> 0
     End Function
 
     Private Shared Function GetPlayerStartingClass() As PlayerStartingClass
         Dim ptr = GetCharData2Ptr()
         If ptr = IntPtr.Zero Then Return PlayerStartingClass.None
-        ' 64-bit pointer dereference (+8), then read class byte at 0xCE (DSR offset)
         Dim subPtr = New IntPtr(RInt64(ptr + &H10))
         If subPtr = IntPtr.Zero Then Return PlayerStartingClass.None
         Return CType(RBytes(subPtr + &HCE, 1)(0), PlayerStartingClass)
     End Function
 
     Private Shared Function GetPlayerCharacterType() As PlayerCharacterType
-        ' TODO: find exact DSR offset for character type within WorldChrMan
-        ' Returning Human as safe default (player is treated as always in own world)
         If IsPlayerLoaded() Then Return PlayerCharacterType.Human
         Return PlayerCharacterType.Hollow
     End Function
 
-    ' WorldChrMan — equivalent of OnlineInfoPtr in PTDE
     Private Shared Function GetOnlineInfoPtr() As IntPtr
         If _worldChrManPtrAddr = IntPtr.Zero Then
             _worldChrManPtrAddr = ResolveRelativeAOB("48 8B 05 ? ? ? ? 48 8B 48 68 48 85 C9 0F 84 ? ? ? ? 48 39 5E 10 0F 84 ? ? ? ? 48")
@@ -384,7 +384,6 @@ Public Class Game
         Return New IntPtr(RInt64(_worldChrManPtrAddr))
     End Function
 
-    ' Local player instance pointer lives at WorldChrMan + 0x68
     Private Shared Function GetPlayerStructPtr() As IntPtr
         Dim worldChrMan = GetOnlineInfoPtr()
         If worldChrMan = IntPtr.Zero Then Return IntPtr.Zero
@@ -403,7 +402,6 @@ Public Class Game
         Return RInt32(ptr + &H68)
     End Function
 
-    ' GameDataMan — equivalent of CharData2 in PTDE
     Public Shared Function GetCharData2Ptr() As IntPtr
         If _charData2PtrAddr = IntPtr.Zero Then
             _charData2PtrAddr = ResolveRelativeAOB("48 8B 05 ? ? ? ? 48 85 C0 ? ? F3 0F 58 80 AC 00 00 00")
@@ -412,7 +410,7 @@ Public Class Game
         Return New IntPtr(RInt64(_charData2PtrAddr))
     End Function
 
-    ' EventFlagMan — base pointer for all event flags (two dereferences needed in DSR)
+
     Public Shared Function GetEventFlagPtr() As Long
         If _eventFlagPtrAddr = IntPtr.Zero Then
             _eventFlagPtrAddr = ResolveRelativeAOB("48 8B 0D ? ? ? ? 99 33 C2 45 33 C0 2B C2 8D 50 F6")

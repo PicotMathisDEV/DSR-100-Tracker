@@ -240,7 +240,7 @@ Partial Class Main
         Me.Label3.Name = "Label3"
         Me.Label3.Size = New System.Drawing.Size(37, 14)
         Me.Label3.TabIndex = 34
-        Me.Label3.Text = "v1.0.0"
+        Me.Label3.Text = "v1.0.2"
         '
         'HookedLabel
         '
@@ -259,7 +259,7 @@ Partial Class Main
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.BackColor = System.Drawing.SystemColors.ActiveCaptionText
-        Me.ClientSize = New System.Drawing.Size(459, 302)
+        Me.ClientSize = New System.Drawing.Size(467, 302)
         Me.Controls.Add(Me.HookedLabel)
         Me.Controls.Add(Me.Label3)
         Me.Controls.Add(Me.bonfiresValueLabel)

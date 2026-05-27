@@ -240,10 +240,15 @@ Partial Class Main
         Me.Label3.Name = "Label3"
         Me.Label3.Size = New System.Drawing.Size(37, 14)
         Me.Label3.TabIndex = 34
+
         Me.Label3.Text = "v1.0.2"
-        '
-        'HookedLabel
-        '
+
+
+
+        Me.Label3.Text = "v1.3.5"
+
+        Me.Label3.Text = "v1.0.3"
+
         Me.HookedLabel.AutoSize = True
         Me.HookedLabel.Enabled = False
         Me.HookedLabel.Font = New System.Drawing.Font("Calibri", 9.0!, System.Drawing.FontStyle.Bold)
@@ -253,6 +258,8 @@ Partial Class Main
         Me.HookedLabel.Size = New System.Drawing.Size(59, 14)
         Me.HookedLabel.TabIndex = 35
         Me.HookedLabel.Text = "✓  Hooked"
+
+
         '
         'Main
         '
@@ -283,7 +290,11 @@ Partial Class Main
         Me.Icon = CType(resources.GetObject("$this.Icon"), System.Drawing.Icon)
         Me.MaximizeBox = False
         Me.Name = "Main"
+ 
+        Me.Text = "SpeedSouls - Dark Souls 100% Tracker"
+
         Me.Text = "SpeedSouls - Dark Souls Remastered 100% Tracker"
+
         Me.ResumeLayout(False)
         Me.PerformLayout()
 

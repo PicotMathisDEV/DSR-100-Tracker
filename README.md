@@ -14,21 +14,19 @@ This tool is almost entirely based on [Kahmul's Dark Souls 100% Tracker](https:/
 
 ## What is tracked
 
-| Category | Weight |
-|---|---|
-| Treasure Locations | 20% |
-| Bosses | 25% |
-| Non-respawning Enemies | 15% |
-| NPC Questlines | 20% |
-| Shortcuts / Locked Doors | 10% |
-| Illusory Walls | 2.5% |
-| Foggates | 2.5% |
-| Kindled Bonfires | 5% |
+| Category                 | Weight |
+| ------------------------ | ------ |
+| Treasure Locations       | 20%    |
+| Bosses                   | 25%    |
+| Non-respawning Enemies   | 15%    |
+| NPC Questlines           | 20%    |
+| Shortcuts / Locked Doors | 10%    |
+| Illusory Walls           | 2.5%   |
+| Foggates                 | 2.5%   |
+| Kindled Bonfires         | 5%     |
 
 ---
 
 ## Requirements
 
-- Dark Souls Remastered (any version, Steam)
-- Windows 64-bit
-- Run as Administrator
+- Dark Souls Remastered

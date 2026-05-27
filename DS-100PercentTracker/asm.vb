@@ -1,5 +1,4 @@
 ﻿Public Class asm
-    'TODO:  Deal with jumps to points not yet defined
     Public bytes() As Byte = {}
     Public pos As Int32
 
@@ -47,7 +46,6 @@
         code.Clear()
         code.Add("inc", &H40)
         code.Add("dec", &H48)
-        'code.Add("push", &H50)
         code.Add("pop", &H58)
         code.Add("pushad", &H60)
         code.Add("popad", &H61)
@@ -64,29 +62,29 @@
     End Sub
     Public Sub AddVar(ByVal name As String, val As Int32)
         name = name.Replace(":", "")
-        
 
-        If Not vars.contains(name) Then
+
+        If Not vars.Contains(name) Then
             vars.Add(name, val)
         Else
             vars(name) = val
-            For each entry In varrefs
-            If entry.value = name Then
-                Dim tmpbyt() as Byte
-                
+            For Each entry In varrefs
+                If entry.Value = name Then
+                    Dim tmpbyt() As Byte
 
-                Select Case bytes(entry.key)
-                    Case &HE8, &HE9
-                        tmpbyt = BitConverter.GetBytes(val - (pos - (bytes.Length - entry.Key)) - 5)
-                        Array.Copy(tmpbyt, 0, bytes, entry.key+1, tmpbyt.Length)
 
-                    Case &HF
-                        tmpbyt = BitConverter.GetBytes(val - (pos - (bytes.Length - entry.Key)) - 6)
-                        Array.Copy(tmpbyt, 0, bytes, entry.key+2, tmpbyt.Length)
+                    Select Case bytes(entry.Key)
+                        Case &HE8, &HE9
+                            tmpbyt = BitConverter.GetBytes(val - (pos - (bytes.Length - entry.Key)) - 5)
+                            Array.Copy(tmpbyt, 0, bytes, entry.Key + 1, tmpbyt.Length)
 
-                End Select
-            End If
-        Next
+                        Case &HF
+                            tmpbyt = BitConverter.GetBytes(val - (pos - (bytes.Length - entry.Key)) - 6)
+                            Array.Copy(tmpbyt, 0, bytes, entry.Key + 2, tmpbyt.Length)
+
+                    End Select
+                End If
+            Next
 
 
 
@@ -95,8 +93,8 @@
     End Sub
     Public Sub Clear()
         bytes = {}
-        vars.Clear
-        varrefs.Clear
+        vars.Clear()
+        varrefs.Clear()
         pos = 0
 
     End Sub
@@ -250,7 +248,7 @@
         Select Case cmd
             Case "add"
                 If reg32.Contains(reg1) And reg2 = "" Then
-                    newbytes = {&H81, &Hc0}
+                    newbytes = {&H81, &HC0}
                     If Math.Abs(val2) < &H80 Then
                         newbytes(0) = newbytes(0) Or 2
                         newbytes = newbytes.Concat({val2 And &HFF}).ToArray
@@ -556,9 +554,9 @@
                     If (ptr1 And reg1 = "esp") Or (ptr2 And reg2 = "esp") Then
                         newbytes = newbytes.Concat({&H24}).ToArray
                     End If
-                    
+
                     If Math.Abs(offset) < &H80 Then
-                        If math.Abs(offset) > 0 Or (ptr2 And reg2 = "ebp") Or (ptr1 And reg1 = "ebp") Then
+                        If Math.Abs(offset) > 0 Or (ptr2 And reg2 = "ebp") Or (ptr1 And reg1 = "ebp") Then
                             newbytes(1) = newbytes(1) Or &H40
                             newbytes = newbytes.Concat({offset And &HFF}).ToArray
                         End If

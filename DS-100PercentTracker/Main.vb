@@ -1,4 +1,4 @@
-Imports System.IO
+﻿Imports System.IO
 Imports System.Reflection
 Imports System.Runtime.InteropServices
 Imports System.Threading
@@ -52,7 +52,7 @@ Public Class Main
         ByVal dwSize As UIntPtr) As Boolean
     End Function
 
-    ' Required to enumerate memory regions for AOB scanning (64-bit layout)
+    ' Required to enumerate memory regions for AOB scan
     <DllImport("kernel32.dll", SetLastError:=True)>
     Private Shared Function VirtualQueryEx(
         ByVal hProcess As IntPtr,
@@ -61,7 +61,6 @@ Public Class Main
         ByVal dwLength As UInteger) As UInteger
     End Function
 
-    ' 64-bit MEMORY_BASIC_INFORMATION — explicit layout to match the OS struct exactly (48 bytes)
     <StructLayout(LayoutKind.Explicit, Size:=48)>
     Private Structure MEMORY_BASIC_INFORMATION
         <FieldOffset(0)> Public BaseAddress As IntPtr
@@ -83,6 +82,37 @@ Public Class Main
     Public Const PROCESS_VM_OPERATION = (&H8)
     Public Const PROCESS_VM_WRITE = (&H20)
     Public Const PROCESS_ALL_ACCESS = &H1F0FFF
+
+    Private WithEvents expandCheckbox As CheckBox
+    Private expandedPanel As Panel
+    Private AlwaysOnTopCheckbox As CheckBox
+    Private WithEvents runModeCheckbox As CheckBox
+    Private sideBarTreasureValueLabel As Label
+    Private sideBarBossesValueLabel As Label
+    Private sideBarEnemiesValueLabel As Label
+    Private sideBarQuestlinesValueLabel As Label
+    Private sideBarLockedDoorsValueLabel As Label
+    Private sideBarIllusoryWallsValueLabel As Label
+    Private sideBarFoggatesValueLabel As Label
+    Private sideBarKindledBonfiresValueLabel As Label
+    Private sideBarTotalValueLabel As Label
+    Private WithEvents mapsListView As ListView
+    Private WithEvents questlinesLabel As Label
+    Private WithEvents questlinesValueLabel As Label
+    Private detailHeaderLabel As Label
+    Private detailTree As TreeView
+    Private nodesByFlagId As New Dictionary(Of Integer, TreeNode)
+    Private currentMapId As String = ""
+
+
+    Private Shared ReadOnly DetailCategories As String() = {
+        "Treasure", "Bosses", "Non-Respawning Enemies",
+        "Shortcuts / Locked Doors", "Illusory Walls", "Foggates", "Kindled Bonfires"
+    }
+
+
+    Private Const QUESTLINES_MAPID As String = "__questlines__"
+
 
     Dim isHooked As Boolean = False
     Public Shared exeVER As String = ""
@@ -136,7 +166,6 @@ Public Class Main
 
     ' Scans the game's main module for a byte pattern.
     ' Use "?" as a single-byte wildcard. Returns IntPtr.Zero if not found.
-    ' NOTE: project must target x64 or AnyCPU — will not work compiled as x86.
     Public Shared Function ScanAOB(pattern As String) As IntPtr
         Dim parts = pattern.Split(" "c)
         Dim patLen = parts.Length
@@ -150,10 +179,12 @@ Public Class Main
             End If
         Next
 
+        If _targetProcess Is Nothing OrElse _targetProcess.HasExited Then Return IntPtr.Zero
+
         Try
             Dim baseAddr = _targetProcess.MainModule.BaseAddress.ToInt64()
             Dim moduleSize = _targetProcess.MainModule.ModuleMemorySize
-            Const CHUNK = 4 * 1024 * 1024  ' lecture par blocs de 4 Mo
+            Const CHUNK = 4 * 1024 * 1024
             Dim offset As Long = 0
 
             Do While offset < moduleSize
@@ -176,15 +207,11 @@ Public Class Main
                 offset += chunkSize
             Loop
         Catch ex As Exception
-            MsgBox("ScanAOB exception: " & ex.Message)
         End Try
 
         Return IntPtr.Zero
     End Function
 
-    ' Resolves a RIP-relative MOV instruction (e.g. 48 8B 0D ?? ?? ?? ??):
-    ' finds the pattern, reads the signed 32-bit relative offset at +3,
-    ' and returns the absolute address of the pointed-to variable.
     Public Shared Function ResolveRelativeAOB(pattern As String) As IntPtr
         Dim instrAddr = ScanAOB(pattern)
         If instrAddr = IntPtr.Zero Then Return IntPtr.Zero
@@ -265,7 +292,6 @@ Public Class Main
         WriteProcessMemory(_targetProcessHandle, addr, val, val.Length, Nothing)
     End Sub
 
-    ' address is Long (64-bit) because DSR is a 64-bit process
     Public Shared Function ReadFlag32(address As Long, mask As UInteger) As Boolean
         Dim _rtnBytes(3) As Byte
         ReadProcessMemory(_targetProcessHandle, New IntPtr(address), _rtnBytes, 4, vbNull)
@@ -302,7 +328,6 @@ Public Class Main
         newThread.Start()
     End Sub
 
-    ' Long (64-bit) instead of Integer — DSR uses 64-bit addresses
     Public Shared eventFlagPtr As Long
 
     Private Sub HookInOtherThread()
@@ -354,7 +379,6 @@ Public Class Main
 
         Game.updateAllEventFlags()
 
-        ' IsPlayerLoaded only blocks if WorldChrMan is found AND player ptr is null (loading screen)
         If Game.IsPlayerLoaded() = False Then
             Invoke(Sub() updateTimer.Start())
             Return
@@ -381,9 +405,24 @@ Public Class Main
                 foggatesValueLabel.Text = $"{Game.GetFoggatesDissolved} / {Game.GetTotalFoggatesCount}"
                 bonfiresValueLabel.Text = $"{Game.GetBonfiresFullyKindled} / {Game.GetTotalBonfiresCount}"
 
+                sideBarTreasureValueLabel.Text = $"{Game.GetTreasureLocationsCleared} / {Game.GetTotalTreasureLocationsCount}"
+                sideBarBossesValueLabel.Text = $"{Game.GetBossesKilled} / {Game.GetTotalBossCount}"
+                sideBarEnemiesValueLabel.Text = $"{Game.GetNonRespawningEnemiesKilled} / {Game.GetTotalNonRespawningEnemiesCount}"
+                sideBarQuestlinesValueLabel.Text = $"{Game.GetNPCQuestlinesCompleted} / {Game.GetTotalNPCQuestlinesCount}"
+                sideBarLockedDoorsValueLabel.Text = $"{Game.GetShortcutsAndLockedDoorsUnlocked} / {Game.GetTotalShortcutsAndLockedDoorsCount}"
+                sideBarIllusoryWallsValueLabel.Text = $"{Game.GetIllusoryWallsRevealed} / {Game.GetTotalIllusoryWallsCount}"
+                sideBarFoggatesValueLabel.Text = $"{Game.GetFoggatesDissolved} / {Game.GetTotalFoggatesCount}"
+                sideBarKindledBonfiresValueLabel.Text = $"{Game.GetBonfiresFullyKindled} / {Game.GetTotalBonfiresCount}"
+
                 Dim totalPercentage = Game.GetTotalCompletionPercentage.ToString("0.0")
                 percentageLabel.Text = $"{totalPercentage}%"
+                sideBarTotalValueLabel.Text = $"{totalPercentage}%"
                 lastPercentage = Game.GetTotalCompletionPercentage
+
+                If expandedPanel IsNot Nothing AndAlso expandedPanel.Visible Then
+                    RefreshMapsListView()
+                    RefreshDetailLive()
+                End If
 
                 updateTimer.Start()
             End Sub)
@@ -394,9 +433,569 @@ Public Class Main
                Sub()
                    hookTimer = New System.Windows.Forms.Timer
                    hookTimer.Interval = hookTimer_Interval
+
                    AddHandler hookTimer.Tick, AddressOf hookTimer_Tick
                    hookTimer.Start()
+                   expandCheckbox = New CheckBox() With {
+                     .Text = "Expand",
+                     .Font = New System.Drawing.Font("Arial", 9.0!, System.Drawing.FontStyle.Bold),
+                     .ForeColor = System.Drawing.Color.White,
+                     .Location = New System.Drawing.Point(100, 269),
+                     .Size = New System.Drawing.Size(75, 30)}
+                   Me.Controls.Add(expandCheckbox)
+                   runModeCheckbox = New CheckBox() With {
+                   .Text = "Run Mode",
+                     .Font = New System.Drawing.Font("Arial", 9.0!, System.Drawing.FontStyle.Bold),
+                     .ForeColor = System.Drawing.Color.White,
+                     .Location = New System.Drawing.Point(180, 269),
+                     .Size = New System.Drawing.Size(95, 30)}
+
+                   Me.Controls.Add(runModeCheckbox)
+                   AlwaysOnTopCheckbox = New CheckBox() With {
+                   .Text = "Always on Top",
+                     .Font = New System.Drawing.Font("Arial", 9.0!, System.Drawing.FontStyle.Bold),
+                     .ForeColor = System.Drawing.Color.White,
+                     .Location = New System.Drawing.Point(280, 269),
+                     .Size = New System.Drawing.Size(135, 30)}
+
+                   Me.Controls.Add(AlwaysOnTopCheckbox)
+                   AddHandler AlwaysOnTopCheckbox.CheckedChanged, AddressOf AlwaysOnTopManagement
+
+                   expandedPanel = New Panel() With {
+                 .Location = New System.Drawing.Point(0, 0),
+                 .Size = New System.Drawing.Size(950, 650),
+                 .BackColor = System.Drawing.SystemColors.ActiveCaptionText,
+                 .Visible = False}
+
+                   Me.Controls.Add(expandedPanel)
+
+                   Dim leftBorderLine As New Panel() With {
+                       .BackColor = System.Drawing.Color.White,
+                       .Size = New System.Drawing.Size(1, 645),
+                       .Location = New System.Drawing.Point(0, 0)
+                   }
+                   expandedPanel.Controls.Add(leftBorderLine)
+
+                   Dim makeTitle = Function(text As String, y As Integer) As Label
+                                       Dim lbl As New Label() With {
+                                           .Text = text,
+                                           .Font = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Bold),
+                                           .ForeColor = System.Drawing.Color.White,
+                                           .Location = New System.Drawing.Point(12, y),
+                                           .AutoSize = True
+                                       }
+                                       expandedPanel.Controls.Add(lbl)
+                                       Return lbl
+                                   End Function
+
+                   Dim makeValue = Function(y As Integer) As Label
+                                       Dim lbl As New Label() With {
+                                           .Text = "X / X",
+                                           .Font = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Bold),
+                                           .ForeColor = System.Drawing.Color.White,
+                                           .Location = New System.Drawing.Point(180, y),
+                                           .Size = New System.Drawing.Size(80, 18),
+                                           .TextAlign = System.Drawing.ContentAlignment.MiddleRight,
+                                           .AutoSize = False
+                                       }
+                                       expandedPanel.Controls.Add(lbl)
+                                       Return lbl
+                                   End Function
+
+                   makeTitle("Treasure", 10)
+                   sideBarTreasureValueLabel = makeValue(10)
+
+                   makeTitle("Bosses", 30)
+                   sideBarBossesValueLabel = makeValue(30)
+
+                   makeTitle("Non-Respawning", 50)
+                   sideBarEnemiesValueLabel = makeValue(50)
+
+                   makeTitle("NPC Questlines", 70)
+                   sideBarQuestlinesValueLabel = makeValue(70)
+
+                   makeTitle("Shortcuts", 90)
+                   sideBarLockedDoorsValueLabel = makeValue(90)
+
+                   makeTitle("Illusory Walls", 110)
+                   sideBarIllusoryWallsValueLabel = makeValue(110)
+
+                   makeTitle("Foggates", 130)
+                   sideBarFoggatesValueLabel = makeValue(130)
+
+                   makeTitle("Kindled Bonfires", 150)
+                   sideBarKindledBonfiresValueLabel = makeValue(150)
+
+                   sideBarTotalValueLabel = New Label() With {
+                       .Text = "X / X",
+                       .Font = New System.Drawing.Font("Arial", 16.0!, System.Drawing.FontStyle.Bold),
+                       .ForeColor = System.Drawing.Color.White,
+                       .Location = New System.Drawing.Point(12, 178),
+                       .Size = New System.Drawing.Size(248, 26),
+                       .TextAlign = System.Drawing.ContentAlignment.MiddleCenter,
+                       .AutoSize = False
+                   }
+                   expandedPanel.Controls.Add(sideBarTotalValueLabel)
+
+                   Dim sideBarSeparatorLabel As New Label() With {
+                   .BorderStyle = BorderStyle.FixedSingle,
+                   .AutoSize = False,
+                   .Size = New System.Drawing.Size(286, 1),
+                   .Location = New System.Drawing.Point(0, 210),
+                   .BackColor = System.Drawing.Color.White
+                   }
+                   expandedPanel.Controls.Add(sideBarSeparatorLabel)
+
+                   ' --- Maps ListView ---
+                   mapsListView = New ListView() With {
+                   .View = System.Windows.Forms.View.Details,
+                   .FullRowSelect = True,
+                   .HideSelection = False,
+                   .GridLines = False,
+                   .MultiSelect = False,
+                   .HeaderStyle = ColumnHeaderStyle.None,
+                   .BackColor = System.Drawing.SystemColors.ActiveCaptionText,
+                   .ForeColor = System.Drawing.Color.White,
+                   .Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Bold),
+                   .BorderStyle = BorderStyle.None,
+                   .Scrollable = False,
+                   .AllowColumnReorder = False,
+                   .OwnerDraw = True,
+                   .Location = New System.Drawing.Point(10, 220),
+                   .Size = New System.Drawing.Size(260, 385)
+                   }
+                   mapsListView.Columns.Add("Map", 175)
+                   Dim progressCol = mapsListView.Columns.Add("Progress", 85)
+                   progressCol.TextAlign = HorizontalAlignment.Right
+
+                   AddHandler mapsListView.ColumnWidthChanging,
+                       Sub(s As Object, args As ColumnWidthChangingEventArgs)
+                           args.Cancel = True
+                           args.NewWidth = mapsListView.Columns(args.ColumnIndex).Width
+                       End Sub
+
+                   AddHandler mapsListView.DrawColumnHeader,
+                       Sub(s As Object, args As DrawListViewColumnHeaderEventArgs)
+                           Using bg As New System.Drawing.SolidBrush(System.Drawing.SystemColors.ActiveCaptionText)
+                               args.Graphics.FillRectangle(bg, args.Bounds)
+                           End Using
+                           Using fg As New System.Drawing.SolidBrush(System.Drawing.Color.White)
+                               Dim sf As New System.Drawing.StringFormat() With {
+                                   .LineAlignment = StringAlignment.Center,
+                                   .Alignment = StringAlignment.Near
+                               }
+                               args.Graphics.DrawString(args.Header.Text, mapsListView.Font, fg, args.Bounds, sf)
+                           End Using
+                       End Sub
+
+                   AddHandler mapsListView.DrawItem,
+                       Sub(s As Object, args As DrawListViewItemEventArgs)
+                           args.DrawDefault = True
+                       End Sub
+                   AddHandler mapsListView.DrawSubItem,
+                       Sub(s As Object, args As DrawListViewSubItemEventArgs)
+                           args.DrawDefault = True
+                       End Sub
+
+                   ' Store the map ID in Tag for later lookup
+                   Dim maps = New List(Of (Id As String, Name As String)) From {
+                       ("18_1", "Asylum"),
+                       ("10_2", "Firelink"),
+                       ("10_1", "Undead Burg"),
+                       ("12_0", "Darkroot"),
+                       ("10_0", "Depths"),
+                       ("11_0", "Painted World"),
+                       ("13_0", "Catacombs"),
+                       ("12_1", "DLC"),
+                       ("15_0", "Sen's"),
+                       ("15_1", "Anor Londo"),
+                       ("13_1", "Tomb of Giants"),
+                       ("14_1", "Demon Ruins"),
+                       ("14_0", "Blighttown"),
+                       ("16_0", "New Londo"),
+                       ("17_0", "Duke's Archives"),
+                       ("13_2", "Ash Lake / Great Hollow"),
+                       ("18_0", "Kiln")
+                   }
+
+                   For Each m In maps
+                       Dim row = New ListViewItem(m.Name)
+                       row.SubItems.Add("0 / 0")
+                       row.Tag = m.Id
+                       mapsListView.Items.Add(row)
+                   Next
+
+                   expandedPanel.Controls.Add(mapsListView)
+
+                   Dim questlinesSeparator As New Panel() With {
+                       .BackColor = System.Drawing.Color.White,
+                       .Size = New System.Drawing.Size(260, 1),
+                       .Location = New System.Drawing.Point(10, 610)
+                   }
+                   expandedPanel.Controls.Add(questlinesSeparator)
+
+                   questlinesLabel = New Label() With {
+                       .Text = "NPC Questlines",
+                       .Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Bold),
+                       .ForeColor = System.Drawing.Color.White,
+                       .BackColor = System.Drawing.SystemColors.ActiveCaptionText,
+                       .Location = New System.Drawing.Point(14, 615),
+                       .Size = New System.Drawing.Size(175, 22),
+                       .TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
+                       .Cursor = Cursors.Hand,
+                       .AutoSize = False
+                   }
+                   expandedPanel.Controls.Add(questlinesLabel)
+
+                   questlinesValueLabel = New Label() With {
+                       .Text = "0 / 0",
+                       .Font = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Bold),
+                       .ForeColor = System.Drawing.Color.White,
+                       .BackColor = System.Drawing.SystemColors.ActiveCaptionText,
+                       .Location = New System.Drawing.Point(185, 615),
+                       .Size = New System.Drawing.Size(85, 22),
+                       .TextAlign = System.Drawing.ContentAlignment.MiddleRight,
+                       .Cursor = Cursors.Hand,
+                       .AutoSize = False
+                   }
+                   expandedPanel.Controls.Add(questlinesValueLabel)
+
+                   Dim midDivider As New Panel() With {
+                       .BackColor = System.Drawing.Color.White,
+                       .Size = New System.Drawing.Size(1, 645),
+                       .Location = New System.Drawing.Point(285, 0)
+                   }
+                   expandedPanel.Controls.Add(midDivider)
+
+                   detailHeaderLabel = New Label() With {
+                       .Text = "Select a map",
+                       .Font = New System.Drawing.Font("Arial", 13.0!, System.Drawing.FontStyle.Bold),
+                       .ForeColor = System.Drawing.Color.White,
+                       .Location = New System.Drawing.Point(300, 12),
+                       .Size = New System.Drawing.Size(630, 26),
+                       .TextAlign = System.Drawing.ContentAlignment.MiddleLeft,
+                       .AutoSize = False
+                   }
+                   expandedPanel.Controls.Add(detailHeaderLabel)
+
+                   Dim detailSeparator As New Panel() With {
+                       .BackColor = System.Drawing.Color.White,
+                       .Size = New System.Drawing.Size(665, 1),
+                       .Location = New System.Drawing.Point(285, 42)
+                   }
+                   expandedPanel.Controls.Add(detailSeparator)
+
+                   detailTree = New TreeView() With {
+                       .Location = New System.Drawing.Point(300, 50),
+                       .Size = New System.Drawing.Size(630, 555),
+                       .BackColor = System.Drawing.SystemColors.ActiveCaptionText,
+                       .ForeColor = System.Drawing.Color.White,
+                       .Font = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Bold),
+                       .BorderStyle = BorderStyle.None,
+                       .ShowLines = False,
+                       .ShowRootLines = False,
+                       .ShowPlusMinus = False,
+                       .HideSelection = True,
+                       .FullRowSelect = True,
+                       .Indent = 20,
+                       .ItemHeight = 22
+                   }
+                   AddHandler detailTree.BeforeExpand,
+                       Sub(s As Object, ev As TreeViewCancelEventArgs)
+                           Dim n = ev.Node
+                           If n.Text.StartsWith(CategoryCollapsedGlyph) Then
+                               n.Text = CategoryExpandedGlyph & n.Text.Substring(CategoryCollapsedGlyph.Length)
+                           End If
+                       End Sub
+                   AddHandler detailTree.BeforeCollapse,
+                       Sub(s As Object, ev As TreeViewCancelEventArgs)
+                           Dim n = ev.Node
+                           If n.Text.StartsWith(CategoryExpandedGlyph) Then
+                               n.Text = CategoryCollapsedGlyph & n.Text.Substring(CategoryExpandedGlyph.Length)
+                           End If
+                       End Sub
+                   AddHandler detailTree.NodeMouseClick,
+                       Sub(s As Object, ev As TreeNodeMouseClickEventArgs)
+                           If ev.Node.Parent Is Nothing Then
+                               If ev.Node.IsExpanded Then ev.Node.Collapse() Else ev.Node.Expand()
+                           End If
+                       End Sub
+                   expandedPanel.Controls.Add(detailTree)
+
                End Sub)
+    End Sub
+
+    Private Sub expandCheckbox_Click(sender As Object, e As EventArgs) Handles expandCheckbox.Click
+        Me.ClientSize = If(expandCheckbox.Checked, New System.Drawing.Size(950, 650), New System.Drawing.Size(467, 302))
+
+        SetCompactLabelsVisible(Not expandCheckbox.Checked)
+        expandedPanel.Visible = expandCheckbox.Checked
+
+        If expandCheckbox.Checked Then
+            expandCheckbox.Location = New System.Drawing.Point(700, 615)
+            runModeCheckbox.Location = New System.Drawing.Point(770, 615)
+            AlwaysOnTopCheckbox.Location = New System.Drawing.Point(550, 615)
+            HookedLabel.Location = New System.Drawing.Point(300, 625)
+            Label3.Location = New System.Drawing.Point(890, 625)
+        Else
+            expandCheckbox.Location = New System.Drawing.Point(105, 269)
+            runModeCheckbox.Location = New System.Drawing.Point(185, 269)
+            AlwaysOnTopCheckbox.Location = New System.Drawing.Point(280, 269)
+            HookedLabel.Location = New System.Drawing.Point(12, 276)
+            Label3.Location = New System.Drawing.Point(420, 276)
+        End If
+        expandCheckbox.BringToFront()
+        AlwaysOnTopCheckbox.BringToFront()
+        runModeCheckbox.BringToFront()
+        HookedLabel.BringToFront()
+        Label3.BringToFront()
+
+        If (expandCheckbox.Checked) Then
+            runModeCheckbox.Checked = False
+            runModeCheckbox.ForeColor = System.Drawing.Color.Gray
+            runModeCheckbox.Refresh()
+            Return
+        End If
+        If (expandCheckbox.Checked = False) Then
+            runModeCheckbox.ForeColor = System.Drawing.Color.White
+            runModeCheckbox.Refresh()
+        End If
+    End Sub
+
+
+
+
+    Private Sub RefreshMapsListView()
+        For Each item As ListViewItem In mapsListView.Items
+            Dim mapId = TryCast(item.Tag, String)
+            If String.IsNullOrEmpty(mapId) Then Continue For
+            Dim res = Game.GetMapCompletion(mapId)
+            Dim newText = $"{res.Done} / {res.Total}"
+            If item.SubItems(1).Text <> newText Then
+                item.SubItems(1).Text = newText
+            End If
+        Next
+
+        If questlinesValueLabel IsNot Nothing Then
+            Dim newQuestText = $"{Game.GetNPCQuestlinesCompleted} / {Game.GetTotalNPCQuestlinesCount}"
+            If questlinesValueLabel.Text <> newQuestText Then
+                questlinesValueLabel.Text = newQuestText
+            End If
+        End If
+    End Sub
+
+    Private Sub RenderQuestlinesDetail()
+        detailHeaderLabel.Text = $"NPC Questlines        {Game.GetNPCQuestlinesCompleted} / {Game.GetTotalNPCQuestlinesCount}"
+
+        detailTree.BeginUpdate()
+        detailTree.Nodes.Clear()
+        nodesByFlagId.Clear()
+
+        Dim entries = Game.GetAllQuestlineEntries()
+        Dim done = entries.Where(Function(e) e.Collected).Count()
+        Dim catNode = New TreeNode(FormatCategoryText("NPC Questlines", done, entries.Count, True)) With {
+            .ForeColor = System.Drawing.Color.White,
+            .NodeFont = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Bold),
+            .Tag = "NPC Questlines"
+        }
+        For Each e In entries
+            Dim child = New TreeNode(FormatItemText(e.FlagId, e.Collected)) With {
+                .ForeColor = If(e.Collected, CollectedItemColor, System.Drawing.Color.White),
+                .NodeFont = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Bold),
+                .Tag = e.FlagId
+            }
+            catNode.Nodes.Add(child)
+            nodesByFlagId(e.FlagId) = child
+        Next
+        detailTree.Nodes.Add(catNode)
+        catNode.Expand()
+        detailTree.EndUpdate()
+    End Sub
+
+    Private Const ItemCheckedGlyph As String = "■  "
+    Private Const ItemUncheckedGlyph As String = "□  "
+    Private Const CategoryExpandedGlyph As String = "▼  "
+    Private Const CategoryCollapsedGlyph As String = "▶  "
+
+    Private Shared ReadOnly CollectedItemColor As System.Drawing.Color = System.Drawing.Color.FromArgb(150, 220, 150)
+
+    Private Function FormatItemText(flagId As Integer, collected As Boolean) As String
+        Dim prefix = If(collected, ItemCheckedGlyph, ItemUncheckedGlyph)
+        Dim name As String = flagId.ToString()
+        Dim found As String = Nothing
+        If ItemNames.Names.TryGetValue(flagId, found) Then
+            name = found
+        ElseIf Dictionaries.sharedTreasureLocationItems.ContainsKey(flagId) Then
+            Dim children = Dictionaries.sharedTreasureLocationItems.Item(flagId)
+            For Each child In children
+                If ItemNames.Names.TryGetValue(CInt(child), found) Then
+                    name = found
+                    Exit For
+                End If
+            Next
+        End If
+        Return prefix & name
+    End Function
+
+    Private Function FormatCategoryText(category As String, done As Integer, total As Integer, expanded As Boolean) As String
+        Dim arrow = If(expanded, CategoryExpandedGlyph, CategoryCollapsedGlyph)
+        Return arrow & category & "   (" & done & "/" & total & ")"
+    End Function
+
+    Private Sub RenderMapDetail(mapId As String)
+        currentMapId = mapId
+        Dim mapName = ""
+        For Each item As ListViewItem In mapsListView.Items
+            If TryCast(item.Tag, String) = mapId Then
+                mapName = item.Text
+                Exit For
+            End If
+        Next
+
+        If mapId = QUESTLINES_MAPID Then
+            RenderQuestlinesDetail()
+            Return
+        End If
+
+        Dim total = Game.GetMapCompletion(mapId)
+        detailHeaderLabel.Text = $"{mapName}  ({mapId})        {total.Done} / {total.Total}"
+
+        detailTree.BeginUpdate()
+        detailTree.Nodes.Clear()
+        nodesByFlagId.Clear()
+
+        For Each cat In DetailCategories
+            Dim entries = Game.GetMapCategoryEntries(mapId, cat)
+            If entries.Count = 0 Then Continue For
+
+            Dim done = entries.Where(Function(e) e.Collected).Count()
+            Dim isFirst = (detailTree.Nodes.Count = 0)
+            Dim catNode = New TreeNode(FormatCategoryText(cat, done, entries.Count, isFirst)) With {
+                .ForeColor = System.Drawing.Color.White,
+                .NodeFont = New System.Drawing.Font("Arial", 11.0!, System.Drawing.FontStyle.Bold),
+                .Tag = cat
+            }
+
+            For Each e In entries
+                Dim child = New TreeNode(FormatItemText(e.FlagId, e.Collected)) With {
+                    .ForeColor = If(e.Collected, CollectedItemColor, System.Drawing.Color.White),
+                    .NodeFont = New System.Drawing.Font("Arial", 10.0!, System.Drawing.FontStyle.Bold),
+                    .Tag = e.FlagId
+                }
+                catNode.Nodes.Add(child)
+                nodesByFlagId(e.FlagId) = child
+            Next
+
+            detailTree.Nodes.Add(catNode)
+        Next
+
+        If detailTree.Nodes.Count > 0 Then
+            detailTree.Nodes(0).Expand()
+        End If
+
+        detailTree.EndUpdate()
+    End Sub
+
+    Private Sub RefreshDetailLive()
+        If String.IsNullOrEmpty(currentMapId) Then Return
+        If detailTree.Nodes.Count = 0 Then Return
+
+        For Each kvp In nodesByFlagId
+            Dim flagId = kvp.Key
+            Dim node = kvp.Value
+            Dim collected As Boolean = False
+            Dim parentCat = TryCast(node.Parent.Tag, String)
+            If parentCat = "Treasure" Then
+                collected = Game.IsTreasureCollected(flagId)
+            ElseIf parentCat = "Non-Respawning Enemies" Then
+                collected = Game.IsNonRespawningEnemyDead(flagId)
+            ElseIf parentCat = "Kindled Bonfires" Then
+                collected = Game.IsBonfireKindled(flagId)
+            Else
+                collected = Game.GetEventFlagState(flagId)
+            End If
+
+            Dim newText = FormatItemText(flagId, collected)
+            If node.Text <> newText Then
+                node.Text = newText
+                node.ForeColor = If(collected, CollectedItemColor, System.Drawing.Color.White)
+            End If
+        Next
+
+        For Each catNode As TreeNode In detailTree.Nodes
+            Dim catName = TryCast(catNode.Tag, String)
+            If catName Is Nothing Then Continue For
+            Dim done = 0
+            For Each child As TreeNode In catNode.Nodes
+                If child.Text.StartsWith(ItemCheckedGlyph) Then done += 1
+            Next
+            Dim newCatText = FormatCategoryText(catName, done, catNode.Nodes.Count, catNode.IsExpanded)
+            If catNode.Text <> newCatText Then catNode.Text = newCatText
+        Next
+
+        Dim newHeader As String
+        If currentMapId = QUESTLINES_MAPID Then
+            newHeader = $"NPC Questlines        {Game.GetNPCQuestlinesCompleted} / {Game.GetTotalNPCQuestlinesCount}"
+        Else
+            Dim mapName = ""
+            For Each item As ListViewItem In mapsListView.Items
+                If TryCast(item.Tag, String) = currentMapId Then
+                    mapName = item.Text
+                    Exit For
+                End If
+            Next
+            Dim total = Game.GetMapCompletion(currentMapId)
+            newHeader = $"{mapName}  ({currentMapId})        {total.Done} / {total.Total}"
+        End If
+        If detailHeaderLabel.Text <> newHeader Then detailHeaderLabel.Text = newHeader
+    End Sub
+
+    Private Sub mapsListView_SelectedIndexChanged(sender As Object, e As EventArgs) Handles mapsListView.SelectedIndexChanged
+        If mapsListView.SelectedItems.Count = 0 Then Return
+        Dim mapId = TryCast(mapsListView.SelectedItems(0).Tag, String)
+        If Not String.IsNullOrEmpty(mapId) Then RenderMapDetail(mapId)
+    End Sub
+
+    Private Sub questlinesLabel_Click(sender As Object, e As EventArgs) Handles questlinesLabel.Click, questlinesValueLabel.Click
+        mapsListView.SelectedItems.Clear()
+        RenderMapDetail(QUESTLINES_MAPID)
+    End Sub
+
+    Private Sub SetCompactLabelsVisible(visible As Boolean)
+        ' Titles (label side)
+        treasureLocationsLabel.Visible = visible
+        Label1.Visible = visible    ' Bosses
+        Label2.Visible = visible    ' Non-respawning Enemies
+        Label4.Visible = visible    ' NPC Questlines
+        Label5.Visible = visible    ' Shortcuts / Locked Doors
+        Label6.Visible = visible    ' Illusory Walls
+        Label7.Visible = visible    ' Foggates
+        Label8.Visible = visible    ' Kindled Bonfires
+
+        ' Values
+        treasureLocationsValueLabel.Visible = visible
+        bossesKilledValueLabel.Visible = visible
+        nonRespawningEnemiesValueLabel.Visible = visible
+        npcQuestlinesValueLabel.Visible = visible
+        shortcutsValueLabel.Visible = visible
+        illusoryWallsValueLabel.Visible = visible
+        foggatesValueLabel.Visible = visible
+        bonfiresValueLabel.Visible = visible
+
+        ' Global %
+        percentageLabel.Visible = visible
+    End Sub
+    Private Sub runMode_Click(sender As Object, e As EventArgs) Handles runModeCheckbox.Click
+        If (expandCheckbox.Checked) Then
+            runModeCheckbox.Checked = False
+
+            Return
+        End If
+
+    End Sub
+
+    Private Sub AlwaysOnTopManagement(sender As Object, e As EventArgs)
+        Me.TopMost = AlwaysOnTopCheckbox.Checked
     End Sub
 
     Private Sub hookTimer_Tick()
@@ -450,8 +1049,8 @@ Public Class Main
     Private Sub Label1_Click(sender As Object, e As EventArgs) Handles treasureLocationsLabel.Click
     End Sub
 
-    Private Sub Label3_Click(sender As Object, e As EventArgs) Handles percentageLabel.Click
-    End Sub
+
+
 
     Private Sub Label5_Click(sender As Object, e As EventArgs) Handles Label5.Click
     End Sub

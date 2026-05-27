@@ -1,5 +1,4 @@
 ﻿Public Enum Map
-
     None = -1
     Depths = 100
     Undead_Burg = 101

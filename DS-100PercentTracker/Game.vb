@@ -40,7 +40,7 @@ Public Class Game
                                     51600260, 51600270, 51600280, 51600310, 51600330, 51600360, 51600370, 51600380, 51600520, 51600500,
                                     51600510, 51600290, 51700000, 51700010, 51700040, 51700060, 51700070, 51700080, 51700120, 51700150,
                                     51700160, 51700170, 51700180, 51700200, 51700210, 51700650, 51700510, 51700520, 51700530, 51700540,
-                                    51700560, 51700580, 51700590, 51700600, 51700630, 51700640, 51700020, 51700050, 51800050, 51810000,
+                                    51700560, 51700580, 51700590, 51700600, 11510615, 51700630, 51700640, 51700020, 51700050, 51800050, 51810000,
                                     51810060, 51810070, 51810080, 51700990  'Duke's Archives Tower Cell Key Serpent item flag
                                     }
     '51100980, 'Firesurge hollow item flag
@@ -68,21 +68,25 @@ Public Class Game
                                                     11410103, 11410104}
 
     Shared totalNPCQuestlineFlags As Array = {11020101, 50000501, 1462, 1431, 1115, 1313, 1254, 1097, 1626,
-                                            1177, 11200535, 11020606, 1012, 11210021}
+                                            1177, 11200535, 11020606, 1012, 11210021, 11010700}
+    'Logan Dead = 1097
+    'Griggs Dead= 1115
+    'Firekeeper Back to firelink = 11020101
+
 
     Shared totalShortcutsLockedDoorsFlags As Array = {11810105, 11600100, 11410340, 11210102, 11210122, 11210132, 11510251, 11510257, 11510220, 11510200,
                                                     11510210, 11020300, 11500100, 11500105, 11010101, 11010160, 11200110, 11600160, 11010100, 11700120,
                                                     11700110, 11300900, 11300901, 11300210, 11100135, 11100030, 11000100, 11010621, 'Shortcuts end here
                                                     11810103, 11810104, 11810106, 11810110, 11600120, 11700300, 11700301, 11700302, 11700303, 11700304,
                                                     11700305, 11700306, 11700140, 11000111, 11500110, 11500111, 11500112, 11500113, 11500115, 11500116, 11010171, 11600110, 11010140, 11010181,
-                                                    11000120, 11010191, 11010192, 11010172, 11100120, 11210650 'Locked doors end here
+                                                    11000120, 11010191, 11010192, 11010172, 11100120, 11210650, 11200111, 11500200 'Locked doors end here
                                                     }
 
     Shared totalIllusoryWallsFlags As Array = {11200120, 11300160, 11320200, 11320201, 11400210, 11510215, 11510401, 11410360, 11310100, 11210200,
                                             11210201, 11210345, 11210025}
 
     Shared totalFoggatesFlags As Array = {11510090, 11510091, 11810090, 11010090, 11300090, 11310090, 11400091, 11500090, 11500091, 11010091,
-                                        11320090, 11000090, 11200090, 11700083, 11100091, 11600090, 11600091}
+                                        11320090, 11000090, 11200090, 11700083, 11100091, 11600090, 11600091, 11219114}
 
     Shared totalBonfireFlags As Array = {1801960, 1601961, 1601950, 1021960, 1301961, 1301960, 1011964, 1011962, 1011961, 1811961,
                                         1811960, 1201961, 1211964, 1211962, 1211961, 1211963, 1211950, 1411964, 1411963, 1411962,
@@ -108,7 +112,7 @@ Public Class Game
 
     Shared totalCompletionPercentage As Double
 
-    ' Cached addresses resolved by AOB scan — found once per hook, never change while process runs
+    ' Never change while process runs
     Private Shared _eventFlagPtrAddr As IntPtr = IntPtr.Zero
     Private Shared _charData2PtrAddr As IntPtr = IntPtr.Zero
     Private Shared _worldChrManPtrAddr As IntPtr = IntPtr.Zero
@@ -121,10 +125,9 @@ Public Class Game
         _netBonfireDbPtrAddr = IntPtr.Zero
     End Sub
 
-    ' FrpgNetManImp — bonfire database manager (from SoulSplitter)
+    ' Bonfire stuff
     Private Shared Function GetNetBonfireDbPtr() As IntPtr
         If _netBonfireDbPtrAddr = IntPtr.Zero Then
-            ' CMP QWORD PTR [RIP+offset], 0 — instruction is 8 bytes (offset at +3)
             Dim instrAddr = ScanAOB("48 83 3D ? ? ? ? 00 48 8B F1")
             If instrAddr = IntPtr.Zero Then Return IntPtr.Zero
             Dim relOffset = RInt32(New IntPtr(instrAddr.ToInt64() + 3))
@@ -144,9 +147,284 @@ Public Class Game
         updateCompletedQuestlinesCount()
         updateKilledNonRespawningEnemiesCount()
         updateFullyKindledBonfires()
+        updateBonfireKindleStateCache()
 
         updateCompletionPercentage()
     End Sub
+
+    Public Shared bonfireKindleStateById As New Dictionary(Of Integer, Integer)
+
+    Private Shared Sub updateBonfireKindleStateCache()
+        bonfireKindleStateById.Clear()
+        Dim netBonfireDb = GetNetBonfireDbPtr()
+        If netBonfireDb = IntPtr.Zero Then Return
+
+        Dim element = New IntPtr(RInt64(netBonfireDb + &H28))
+        If element = IntPtr.Zero Then Return
+        element = New IntPtr(RInt64(element))
+        If element = IntPtr.Zero Then Return
+        Dim bonfireItem = New IntPtr(RInt64(element + &H10))
+
+        For i As Integer = 0 To 99
+            If bonfireItem = IntPtr.Zero Then Exit For
+            Dim bonfireID = RInt32(bonfireItem + &H8)
+            If bonfireID = 0 Then Exit For
+            Dim kindleState = RInt32(bonfireItem + &HC)
+            bonfireKindleStateById(bonfireID) = kindleState
+            element = New IntPtr(RInt64(element))
+            If element = IntPtr.Zero Then Exit For
+            bonfireItem = New IntPtr(RInt64(element + &H10))
+        Next
+    End Sub
+
+    Public Shared Function GetMapIdFromFlag(flagId As Integer) As String
+        Dim overrideMap As String = Nothing
+        If Dictionaries.flagToMapOverride.TryGetValue(flagId, overrideMap) Then
+            Return overrideMap
+        End If
+
+        Dim idString = flagId.ToString("D8")
+        Dim area = idString.Substring(1, 3)
+        If area = "000" Then Return ""
+        Dim a1 = area.Substring(0, 2)
+        Dim a2 = area.Substring(2, 1)
+        Dim x As Integer
+        If Not Integer.TryParse(a1, x) OrElse Not Integer.TryParse(a2, x) Then Return ""
+        Return a1 & "_" & a2
+    End Function
+
+    ' Special Loot
+    Public Shared Function IsTreasureCollected(flagId As Integer) As Boolean
+        Dim checkFlag = flagId
+        If Dictionaries.sharedTreasureLocationItems.ContainsKey(flagId) Then
+            Dim values = Dictionaries.sharedTreasureLocationItems.Item(flagId)
+            checkFlag = values(values.Length - 1)
+        End If
+        Return GetEventFlagState(checkFlag)
+    End Function
+
+    Public Shared Function IsNonRespawningEnemyDead(flagId As Integer) As Boolean
+        If flagId = 11515080 Or flagId = 11515081 Then
+            Return GetEventFlagState(11510400)
+        End If
+        Return GetEventFlagState(flagId)
+    End Function
+
+    Public Shared Function IsBonfireKindled(bonfireId As Integer) As Boolean
+        Dim state As Integer = -1
+        bonfireKindleStateById.TryGetValue(bonfireId, state)
+        Return state = 40
+    End Function
+
+    Public Shared Function IsItemAvailable(flagId As Integer) As Boolean
+        Dim required As Integer = 0
+        If Dictionaries.itemSpawnPreconditions.TryGetValue(flagId, required) Then
+            Return GetEventFlagState(required)
+        End If
+        Return True
+    End Function
+
+    ' Return Total for a Map XX_X
+    ' Itère toutes les catégories et ne compte que les flags dont la mapId dérivée correspond.
+    Public Shared Function GetMapCompletion(mapId As String) As (Done As Integer, Total As Integer)
+        Dim done As Integer = 0
+        Dim total As Integer = 0
+
+        ' Treasure
+        For Each item In totalItemFlags
+            If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+            If Not IsItemAvailable(CInt(item)) Then Continue For
+            total += 1
+            If IsTreasureCollected(CInt(item)) Then done += 1
+        Next
+
+        ' Starting class items
+        Dim startingClass = GetPlayerStartingClass()
+        If startingClass <> PlayerStartingClass.None AndAlso Dictionaries.startingClassItems.ContainsKey(startingClass) Then
+            For Each item In Dictionaries.startingClassItems.Item(startingClass)
+                If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                total += 1
+                If GetEventFlagState(CInt(item)) Then done += 1
+            Next
+        End If
+
+        ' Bosses
+        For Each item In totalBossFlags
+            If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+            total += 1
+            If GetEventFlagState(CInt(item)) Then done += 1
+        Next
+
+        ' Non-respawning enemies
+        For Each item In totalNonRespawningEnemiesFlags
+            If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+            total += 1
+            If IsNonRespawningEnemyDead(CInt(item)) Then done += 1
+        Next
+
+        ' Hostile NPCs 
+        For Each npc In Dictionaries.npcHostileDeadFlags
+            Dim deadFlag = CInt(npc.GetValue(1))
+            If GetMapIdFromFlag(deadFlag) <> mapId Then Continue For
+            If GetEventFlagState(CInt(npc.GetValue(0))) Then
+                total += 1
+                If GetEventFlagState(deadFlag) Then done += 1
+            ElseIf GetEventFlagState(deadFlag) Then
+                total += 1
+                done += 1
+            End If
+        Next
+
+        ' Forest hunters if not in cov
+        If GetEventFlagState(857) = False Then
+            For Each hunterDead In Dictionaries.npcForestHunterFlags
+                If GetMapIdFromFlag(hunterDead) <> mapId Then Continue For
+                total += 1
+                If GetEventFlagState(hunterDead) Then done += 1
+            Next
+        End If
+
+        ' NPC drops
+        For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcDroppedItems
+            If GetEventFlagState(pair.Key) = False Then Continue For
+            Dim drop = CInt(pair.Value(pair.Value.Length - 1))
+            If GetMapIdFromFlag(drop) <> mapId Then Continue For
+            total += 1
+            If GetEventFlagState(drop) Then done += 1
+        Next
+
+
+        ' Shortcuts / Locked Doors
+        For Each item In totalShortcutsLockedDoorsFlags
+            If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+            total += 1
+            If GetEventFlagState(CInt(item)) Then done += 1
+        Next
+
+        ' Illusory Walls
+        For Each item In totalIllusoryWallsFlags
+            If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+            total += 1
+            If GetEventFlagState(CInt(item)) Then done += 1
+        Next
+
+        ' Foggates
+        For Each item In totalFoggatesFlags
+            If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+            total += 1
+            If GetEventFlagState(CInt(item)) Then done += 1
+        Next
+
+        ' Bonfires (kindled = state 40)
+        For Each bID In totalBonfireFlags
+            If GetMapIdFromFlag(CInt(bID)) <> mapId Then Continue For
+            total += 1
+            If IsBonfireKindled(CInt(bID)) Then done += 1
+        Next
+
+        Return (done, total)
+    End Function
+
+
+    Public Shared Function GetMapCategoryEntries(mapId As String, category As String) As List(Of (FlagId As Integer, Collected As Boolean))
+        Dim result As New List(Of (FlagId As Integer, Collected As Boolean))
+
+        Select Case category
+            Case "Treasure"
+                For Each item In totalItemFlags
+                    If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                    If Not IsItemAvailable(CInt(item)) Then Continue For
+                    result.Add((CInt(item), IsTreasureCollected(CInt(item))))
+                Next
+                ' Starting class items
+                Dim startingClass = GetPlayerStartingClass()
+                If startingClass <> PlayerStartingClass.None AndAlso Dictionaries.startingClassItems.ContainsKey(startingClass) Then
+                    For Each item In Dictionaries.startingClassItems.Item(startingClass)
+                        If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                        result.Add((CInt(item), GetEventFlagState(CInt(item))))
+                    Next
+                End If
+                ' NPC drops (active only)
+                For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcDroppedItems
+                    If GetEventFlagState(pair.Key) = False Then Continue For
+                    Dim drop = CInt(pair.Value(pair.Value.Length - 1))
+                    If GetMapIdFromFlag(drop) <> mapId Then Continue For
+                    result.Add((drop, GetEventFlagState(drop)))
+                Next
+
+            Case "Bosses"
+                For Each item In totalBossFlags
+                    If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                    result.Add((CInt(item), GetEventFlagState(CInt(item))))
+                Next
+
+            Case "Non-Respawning Enemies"
+                For Each item In totalNonRespawningEnemiesFlags
+                    If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                    result.Add((CInt(item), IsNonRespawningEnemyDead(CInt(item))))
+                Next
+                For Each npc In Dictionaries.npcHostileDeadFlags
+                    Dim deadFlag = CInt(npc.GetValue(1))
+                    If GetMapIdFromFlag(deadFlag) <> mapId Then Continue For
+                    If GetEventFlagState(CInt(npc.GetValue(0))) OrElse GetEventFlagState(deadFlag) Then
+                        result.Add((deadFlag, GetEventFlagState(deadFlag)))
+                    End If
+                Next
+                If GetEventFlagState(857) = False Then
+                    For Each hunterDead In Dictionaries.npcForestHunterFlags
+                        If GetMapIdFromFlag(hunterDead) <> mapId Then Continue For
+                        result.Add((hunterDead, GetEventFlagState(hunterDead)))
+                    Next
+                End If
+
+            Case "NPC Questlines"
+
+
+            Case "Shortcuts / Locked Doors"
+                For Each item In totalShortcutsLockedDoorsFlags
+                    If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                    result.Add((CInt(item), GetEventFlagState(CInt(item))))
+                Next
+
+            Case "Illusory Walls"
+                For Each item In totalIllusoryWallsFlags
+                    If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                    result.Add((CInt(item), GetEventFlagState(CInt(item))))
+                Next
+
+            Case "Foggates"
+                For Each item In totalFoggatesFlags
+                    If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
+                    result.Add((CInt(item), GetEventFlagState(CInt(item))))
+                Next
+
+            Case "Kindled Bonfires"
+                For Each bID In totalBonfireFlags
+                    If GetMapIdFromFlag(CInt(bID)) <> mapId Then Continue For
+                    result.Add((CInt(bID), IsBonfireKindled(CInt(bID))))
+                Next
+        End Select
+
+        Return result
+    End Function
+
+
+    Public Shared Function GetAllQuestlineEntries() As List(Of (FlagId As Integer, Collected As Boolean))
+        Dim result As New List(Of (FlagId As Integer, Collected As Boolean))
+        For Each item In totalNPCQuestlineFlags
+            Dim flag = CInt(item)
+            Dim collected As Boolean
+            If flag = 1012 Then
+                collected = GetEventFlagState(1011) OrElse GetEventFlagState(1012)
+            ElseIf flag = 11200535 Then
+                collected = GetEventFlagState(1604) OrElse GetEventFlagState(11200535)
+            Else
+                collected = GetEventFlagState(flag)
+            End If
+            result.Add((flag, collected))
+        Next
+        Return result
+    End Function
 
     Private Shared Sub updateFullyKindledBonfires()
         Dim netBonfireDb = GetNetBonfireDbPtr()
@@ -363,7 +641,7 @@ Public Class Game
         Return eventFlagPtr <> 0
     End Function
 
-    Private Shared Function GetPlayerStartingClass() As PlayerStartingClass
+    Public Shared Function GetPlayerStartingClass() As PlayerStartingClass
         Dim ptr = GetCharData2Ptr()
         If ptr = IntPtr.Zero Then Return PlayerStartingClass.None
         Dim subPtr = New IntPtr(RInt64(ptr + &H10))
@@ -515,5 +793,4 @@ Public Class Game
             Return totalCompletionPercentage
         End Get
     End Property
-
 End Class

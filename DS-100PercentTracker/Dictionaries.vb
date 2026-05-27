@@ -1,4 +1,4 @@
-﻿Public Class Dictionaries
+Public Class Dictionaries
 
     'Dictionary for the starting items in Asylum. Key is the starting class, values are the starting item flags
     Public Shared startingClassItems As Dictionary(Of PlayerStartingClass, Array)
@@ -17,6 +17,10 @@
     Public Shared eventFlagAreas As Dictionary(Of String, Integer)
 
     Public Shared npcForestHunterFlags As List(Of Integer)
+
+    Public Shared itemSpawnPreconditions As Dictionary(Of Integer, Integer)
+
+    Public Shared flagToMapOverride As Dictionary(Of Integer, String)
 
     Shared Sub New()
         eventFlagGroups = New Dictionary(Of String, Integer)
@@ -84,7 +88,7 @@
         npcDroppedItems.Add(1272, {51400990}) 'Fair Lady
         npcDroppedItems.Add(1864, {50000501, 50000500}) 'Ciaran
         npcDroppedItems.Add(1513, {50006280, 50000070}) 'Siegmeyer
-        npcDroppedItems.Add(11200818, {50008000, 50008001}) 'Pharis
+        npcDroppedItems.Add(11200818, {50008001, 50008000}) 'Pharis
 
 
         npcDroppedItems.Add(11210021, {51210910}) 'Sif rescued in DLC
@@ -134,6 +138,11 @@
         sharedTreasureLocationItems.Add(51600360, {51600361}) 'Witch Set + Beatrice's Catalyst
         sharedTreasureLocationItems.Add(51700070, {51700071}) 'Maiden Set + White Seance Ring
         sharedTreasureLocationItems.Add(51700640, {51700641}) 'Sage Set + Logan's Catalyst
+
+        itemSpawnPreconditions = New Dictionary(Of Integer, Integer)
+
+        flagToMapOverride = New Dictionary(Of Integer, String)
+        flagToMapOverride.Add(15, "18_0")   ' Gwyn (Kiln)
 
     End Sub
 

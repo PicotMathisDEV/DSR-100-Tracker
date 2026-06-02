@@ -508,7 +508,7 @@ Public Class Main
                    makeTitle("Bosses", 30)
                    sideBarBossesValueLabel = makeValue(30)
 
-                   makeTitle("Non-Respawning", 50)
+                   makeTitle("Non-Respawning Enemies", 50)
                    sideBarEnemiesValueLabel = makeValue(50)
 
                    makeTitle("NPC Questlines", 70)
@@ -610,11 +610,11 @@ Public Class Main
                        ("15_0", "Sen's"),
                        ("15_1", "Anor Londo"),
                        ("13_1", "Tomb of Giants"),
-                       ("14_1", "Demon Ruins"),
+                       ("14_1", "Demon Ruins & Izalith"),
                        ("14_0", "Blighttown"),
-                       ("16_0", "New Londo"),
+                       ("16_0", "New Londo & Valley"),
                        ("17_0", "Duke's Archives"),
-                       ("13_2", "Ash Lake / Great Hollow"),
+                       ("13_2", "Ash Lake & Great Hollow"),
                        ("18_0", "Kiln")
                    }
 

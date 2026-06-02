@@ -142,7 +142,20 @@ Public Class Dictionaries
         itemSpawnPreconditions = New Dictionary(Of Integer, Integer)
 
         flagToMapOverride = New Dictionary(Of Integer, String)
-        flagToMapOverride.Add(15, "18_0")   ' Gwyn (Kiln)
+        flagToMapOverride.Add(2, "10_0")   ' Gaping Dragon 
+        flagToMapOverride.Add(3, "10_1")   ' Gargoyles
+        flagToMapOverride.Add(4, "11_0")   ' Priscilla
+        flagToMapOverride.Add(5, "12_0")   ' Sif
+        flagToMapOverride.Add(6, "13_0")   ' Pinwheel
+        flagToMapOverride.Add(7, "13_1")   ' Nito
+        flagToMapOverride.Add(9, "14_0")   ' Chaos Witch Quelaag
+        flagToMapOverride.Add(10, "14_1")   ' Bed of Chaos
+        flagToMapOverride.Add(11, "15_0")   ' Iron Golem
+        flagToMapOverride.Add(12, "15_1")   ' Ornstein & Smough
+        flagToMapOverride.Add(13, "16_0")   ' 4 Kings
+        flagToMapOverride.Add(14, "17_0")   ' Seath
+        flagToMapOverride.Add(15, "18_0")   ' Gwyn 
+        flagToMapOverride.Add(16, "18_1")   ' Asylum Demon
 
     End Sub
 

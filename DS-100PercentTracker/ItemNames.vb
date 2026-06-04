@@ -129,7 +129,7 @@
 
         Names.Add(11010902, "Capra Demon")
         '---Undead Parish---'
-        Names.Add(3, "Bell Gargoyles")
+        Names.Add(3, "Gargoyles")
         ' --- Non-Respawning Enemies ---
         '---Undead Burg---'
         Names.Add(11010861, "Black Knight Sword Guy (Undead Burg)")
@@ -195,8 +195,8 @@
         Names.Add(51200150, "Dusk set")
         ' --- Bosses ---
         '---Garden---'
-        Names.Add(11200900, "Moonlight Buttefly")
-        Names.Add(5, "Great Grey Wolf Sif")
+        Names.Add(11200900, "Buttefly")
+        Names.Add(5, "Sif")
         ' --- Non-Respawning Enemies ---
         '---Basin---'
         Names.Add(11200801, "Darkroot Hydra")
@@ -297,7 +297,7 @@
         Names.Add(51100200, "Bloodshield")
         Names.Add(51100150, "Xanthous set")
         ' --- Bosses ---
-        Names.Add(4, "Crossbreed Priscilla")
+        Names.Add(4, "pricilla")
         ' --- Non-Respawning Enemies ---
         Names.Add(11100400, "Undead Dragon")
         ' --- Shortcuts / Locked Doors ---
@@ -346,7 +346,7 @@
         Names.Add(51700200, "Fire Keeper Soul")
         ' --- Bosses ---
         'Duke's Archives'
-        Names.Add(14, "Seath the Scaleless")
+        Names.Add(14, "Seath")
         ' --- Non-Respawning Enemies ---
         'Duke's Archives'
         Names.Add(11700815, "Boar")
@@ -483,11 +483,11 @@
         'Sanctuary Garden'
         Names.Add(11210000, "Sanctuary Guardian")
         'Oolacile Township'
-        Names.Add(11210001, "Knight Artorias")
+        Names.Add(11210001, "Artorias")
         'Chasm of the Abyss'
-        Names.Add(11210002, "Manus, Father of the Abyss")
+        Names.Add(11210002, "Manus")
         'Royal Wood'
-        Names.Add(11210004, "Black Dragon Kalameet")
+        Names.Add(11210004, "Kalameet")
         ' --- Non-Respawning Enemies ---
         'Royal Wood'
         Names.Add(11210351, "Titanite (Next to a big pit)")
@@ -609,8 +609,8 @@
         Names.Add(51510660, "Chest containing Brass set")
         Names.Add(11510615, "Empty Chest")
         ' --- Bosses ---
-        Names.Add(12, "Ornstein & Smough")
-        Names.Add(11510900, "Dark Sun Gwyndolin")
+        Names.Add(12, "O&S")
+        Names.Add(11510900, "Gwyndolin")
         ' --- Non-Respawning Enemies ---
         Names.Add(11510851, "Mimic that drops Crystal Halberd")
         Names.Add(11510850, "Mimic that drops occult club")
@@ -680,7 +680,7 @@
         Names.Add(11410410, "Demon Firesage")
         Names.Add(11410901, "Centipede Demon")
         'Lost Izalith'
-        Names.Add(10, "Bed Of Chaos")
+        Names.Add(10, "BOC")
         ' --- Non-Respawning Enemies ---
         'Demon Ruins'
         Names.Add(11410138, "Taurus Demon")
@@ -770,7 +770,7 @@
         Names.Add(51310240, "Paladin set (require Leeroy kill)")
         Names.Add(51310160, "White Titanite Chunk (TOTG2, in a corner)")
         ' --- Bosses ---
-        Names.Add(7, "Grevelord Nito")
+        Names.Add(7, "Nito")
         ' --- Non-Respawning Enemies ---
         Names.Add(11310820, "BKH guy")
         Names.Add(11310821, "Titanite (Nito's Domain)")
@@ -859,7 +859,7 @@
         Names.Add(51400180, "Whip (the a well)")
         Names.Add(51400370, "Thorns set (Kirk)")
         ' --- Bosses ---
-        Names.Add(9, "Chaos Witch Quelaag")
+        Names.Add(9, "Quelaag")
         ' --- Non-Respawning Enemies ---
         Names.Add(11400853, "Blowdart Sniper (next to water wheel)")
         Names.Add(11400855, "Blowdart Sniper (next to water wheel in a big room with Firekeeper Soul)")
@@ -917,7 +917,7 @@
         Names.Add(51600221, "Brigand set & Spider shield")
         Names.Add(51600260, "Humanity (behind mass of soul enemy)")
         ' --- Bosses ---
-        Names.Add(13, "Four Kings")
+        Names.Add(13, "Foor Kings")
         ' --- Non-Respawning Enemies ---
         Names.Add(11600850, "Mass of soul")
         Names.Add(11600851, "Mass of soul that guard a chest")
@@ -958,7 +958,7 @@
         Names.Add(1012, "Solaire")
         Names.Add(1011, "Solaire")
         Names.Add(11210021, "Sif ")
-        '  Names.Add(, "Dusk")'
+        Names.Add(1128, "Dusk")
         Names.Add(11010700, "Oswald")
         ' Names.Add(?, "Quelaana")  
 

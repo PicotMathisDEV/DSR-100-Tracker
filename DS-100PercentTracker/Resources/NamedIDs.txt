@@ -297,7 +297,7 @@
 11210206|Oolacile, Sound Effect for Illusory Wall #2
 11210340|Chasm of the Abyss, Alvina 1st Warp
 11210341|Chasm of the Abyss, Alvina 2nd Warp
-11210345|Chasm of the Abyss, Alvina 3rd Warp
+11210025|Chasm of the Abyss, Alvina 3rd Warp
 11210346|Chasm of the Abyss, Alvina Gone?
 11210600|Royal Wood, Blue Titanite Slab chest opened
 11210650|Oolacile, Crest Key Door

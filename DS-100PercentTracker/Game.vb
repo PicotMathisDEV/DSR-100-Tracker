@@ -41,7 +41,7 @@ Public Class Game
                                     51600510, 51600290, 51700000, 51700010, 51700040, 51700060, 51700070, 51700080, 51700120, 51700150,
                                     51700160, 51700170, 51700180, 51700200, 51700210, 51700650, 51700510, 51700520, 51700530, 51700540,
                                     51700560, 51700580, 51700590, 51700600, 11510615, 51700630, 51700640, 51700020, 51700050, 51800050, 51810000,
-                                    51810060, 51810070, 51810080, 51700990  'Duke's Archives Tower Cell Key Serpent item flag
+                                    51810060, 51810070, 51810080, 50007020, 51700990 'Duke's Archives Tower Cell Key Serpent item flag
                                     }
     '51100980, 'Firesurge hollow item flag
     '51320990  'Stone Dragon Tail
@@ -83,7 +83,7 @@ Public Class Game
                                                     }
 
     Shared totalIllusoryWallsFlags As Array = {11200120, 11300160, 11320200, 11320201, 11400210, 11510215, 11510401, 11410360, 11310100, 11210200,
-                                            11210201, 11210345, 11210025}
+                                            11210201, 11210025}
 
     Shared totalFoggatesFlags As Array = {11510090, 11510091, 11810090, 11010090, 11300090, 11310090, 11400091, 11500090, 11500091, 11010091,
                                         11320090, 11000090, 11200090, 11700083, 11100091, 11600090, 11600091, 11219114}
@@ -92,7 +92,7 @@ Public Class Game
                                         1811960, 1201961, 1211964, 1211962, 1211961, 1211963, 1211950, 1411964, 1411963, 1411962,
                                         1411961, 1411960, 1411950, 1401962, 1401961, 1401960, 1321962, 1321961, 1321960, 1101960,
                                         1511950, 1511960, 1511961, 1511962, 1701950, 1701960, 1701961, 1701962, 1001960, 1501961,
-                                        1311950, 1311960, 1311961, 1302962}
+                                        1311950, 1302962, 1311960, 1311961}
 
 
 
@@ -106,6 +106,9 @@ Public Class Game
     Shared foggatesDissolved As Integer
 
     Shared kindledBonfires As Integer
+
+    Shared npcDropsCollected As Integer
+    Shared npcDropsTotal As Integer
 
     Shared totalTreasureLocationsCount As Integer
     Shared totalNonRespawningEnemiesCount As Integer
@@ -225,7 +228,6 @@ Public Class Game
     End Function
 
     ' Return Total for a Map XX_X
-    ' Itère toutes les catégories et ne compte que les flags dont la mapId dérivée correspond.
     Public Shared Function GetMapCompletion(mapId As String) As (Done As Integer, Total As Integer)
         Dim done As Integer = 0
         Dim total As Integer = 0
@@ -284,15 +286,14 @@ Public Class Game
             Next
         End If
 
-        ' NPC drops
-        For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcDroppedItems
+        ' NPC zone drops (fixed location, active only)
+        For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcZoneDroppedItems
             If GetEventFlagState(pair.Key) = False Then Continue For
             Dim drop = CInt(pair.Value(pair.Value.Length - 1))
             If GetMapIdFromFlag(drop) <> mapId Then Continue For
             total += 1
             If GetEventFlagState(drop) Then done += 1
         Next
-
 
         ' Shortcuts / Locked Doors
         For Each item In totalShortcutsLockedDoorsFlags
@@ -344,14 +345,13 @@ Public Class Game
                         result.Add((CInt(item), GetEventFlagState(CInt(item))))
                     Next
                 End If
-                ' NPC drops (active only)
-                For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcDroppedItems
+                ' NPC zone drops (prob NU )
+                For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcZoneDroppedItems
                     If GetEventFlagState(pair.Key) = False Then Continue For
                     Dim drop = CInt(pair.Value(pair.Value.Length - 1))
                     If GetMapIdFromFlag(drop) <> mapId Then Continue For
                     result.Add((drop, GetEventFlagState(drop)))
                 Next
-
             Case "Bosses"
                 For Each item In totalBossFlags
                     If GetMapIdFromFlag(CInt(item)) <> mapId Then Continue For
@@ -426,6 +426,28 @@ Public Class Game
         Return result
     End Function
 
+    Public Shared Function GetAllNpcDropEntries() As List(Of (FlagId As Integer, Collected As Boolean))
+        Dim result As New List(Of (FlagId As Integer, Collected As Boolean))
+        For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcDroppedItems
+            If GetEventFlagState(pair.Key) = False Then Continue For
+            Dim drop = CInt(pair.Value(pair.Value.Length - 1))
+            result.Add((drop, GetEventFlagState(drop)))
+        Next
+        Return result
+    End Function
+
+    Public Shared ReadOnly Property GetNpcDropsCollected() As Integer
+        Get
+            Return npcDropsCollected
+        End Get
+    End Property
+
+    Public Shared ReadOnly Property GetTotalNpcDropsCount() As Integer
+        Get
+            Return npcDropsTotal
+        End Get
+    End Property
+
     Private Shared Sub updateFullyKindledBonfires()
         Dim netBonfireDb = GetNetBonfireDbPtr()
         If netBonfireDb = IntPtr.Zero Then Return
@@ -457,6 +479,8 @@ Public Class Game
         Dim value As Boolean
         totalTreasureLocationsCount = totalItemFlags.Length
         itemsPickedUp = 0
+        npcDropsTotal = 0
+        npcDropsCollected = 0
 
         For Each item In totalItemFlags
             Dim originalItem = item
@@ -486,11 +510,24 @@ Public Class Game
             value = GetEventFlagState(pair.Key)
             If value = True Then
                 totalTreasureLocationsCount += 1
+                npcDropsTotal += 1
                 Dim item = pair.Value(pair.Value.Length - 1)
                 value = GetEventFlagState(item)
                 If value = True Then
                     itemsPickedUp += 1
+                    npcDropsCollected += 1
+                End If
+            End If
+        Next
 
+        For Each pair As KeyValuePair(Of Integer, Array) In Dictionaries.npcZoneDroppedItems
+            value = GetEventFlagState(pair.Key)
+            If value = True Then
+                totalTreasureLocationsCount += 1
+                Dim item = pair.Value(pair.Value.Length - 1)
+                value = GetEventFlagState(item)
+                If value = True Then
+                    itemsPickedUp += 1
                 End If
             End If
         Next

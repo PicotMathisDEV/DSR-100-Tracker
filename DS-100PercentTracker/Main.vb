@@ -85,7 +85,6 @@ Public Class Main
 
     Private WithEvents expandCheckbox As CheckBox
     Private expandedPanel As Panel
-    Private AlwaysOnTopCheckbox As CheckBox
     Private WithEvents runModeCheckbox As CheckBox
     Private sideBarTreasureValueLabel As Label
     Private sideBarBossesValueLabel As Label
@@ -104,7 +103,7 @@ Public Class Main
     Private nodesByFlagId As New Dictionary(Of Integer, TreeNode)
     Private currentMapId As String = ""
 
-
+    
     Private Shared ReadOnly DetailCategories As String() = {
         "Treasure", "Bosses", "Non-Respawning Enemies",
         "Shortcuts / Locked Doors", "Illusory Walls", "Foggates", "Kindled Bonfires"
@@ -184,7 +183,7 @@ Public Class Main
         Try
             Dim baseAddr = _targetProcess.MainModule.BaseAddress.ToInt64()
             Dim moduleSize = _targetProcess.MainModule.ModuleMemorySize
-            Const CHUNK = 4 * 1024 * 1024
+            Const CHUNK = 4 * 1024 * 1024  
             Dim offset As Long = 0
 
             Do While offset < moduleSize
@@ -440,26 +439,17 @@ Public Class Main
                      .Text = "Expand",
                      .Font = New System.Drawing.Font("Arial", 9.0!, System.Drawing.FontStyle.Bold),
                      .ForeColor = System.Drawing.Color.White,
-                     .Location = New System.Drawing.Point(100, 269),
+                     .Location = New System.Drawing.Point(110, 269),
                      .Size = New System.Drawing.Size(75, 30)}
                    Me.Controls.Add(expandCheckbox)
                    runModeCheckbox = New CheckBox() With {
                    .Text = "Run Mode",
                      .Font = New System.Drawing.Font("Arial", 9.0!, System.Drawing.FontStyle.Bold),
                      .ForeColor = System.Drawing.Color.White,
-                     .Location = New System.Drawing.Point(180, 269),
+                     .Location = New System.Drawing.Point(200, 269),
                      .Size = New System.Drawing.Size(95, 30)}
 
                    Me.Controls.Add(runModeCheckbox)
-                   AlwaysOnTopCheckbox = New CheckBox() With {
-                   .Text = "Always on Top",
-                     .Font = New System.Drawing.Font("Arial", 9.0!, System.Drawing.FontStyle.Bold),
-                     .ForeColor = System.Drawing.Color.White,
-                     .Location = New System.Drawing.Point(280, 269),
-                     .Size = New System.Drawing.Size(135, 30)}
-
-                   Me.Controls.Add(AlwaysOnTopCheckbox)
-                   AddHandler AlwaysOnTopCheckbox.CheckedChanged, AddressOf AlwaysOnTopManagement
 
                    expandedPanel = New Panel() With {
                  .Location = New System.Drawing.Point(0, 0),
@@ -508,7 +498,7 @@ Public Class Main
                    makeTitle("Bosses", 30)
                    sideBarBossesValueLabel = makeValue(30)
 
-                   makeTitle("Non-Respawning Enemies", 50)
+                   makeTitle("Non-Respawning", 50)
                    sideBarEnemiesValueLabel = makeValue(50)
 
                    makeTitle("NPC Questlines", 70)
@@ -610,11 +600,11 @@ Public Class Main
                        ("15_0", "Sen's"),
                        ("15_1", "Anor Londo"),
                        ("13_1", "Tomb of Giants"),
-                       ("14_1", "Demon Ruins & Izalith"),
+                       ("14_1", "Demon Ruins"),
                        ("14_0", "Blighttown"),
-                       ("16_0", "New Londo & Valley"),
+                       ("16_0", "New Londo"),
                        ("17_0", "Duke's Archives"),
-                       ("13_2", "Ash Lake & Great Hollow"),
+                       ("13_2", "Ash Lake / Great Hollow"),
                        ("18_0", "Kiln")
                    }
 
@@ -734,18 +724,15 @@ Public Class Main
         If expandCheckbox.Checked Then
             expandCheckbox.Location = New System.Drawing.Point(700, 615)
             runModeCheckbox.Location = New System.Drawing.Point(770, 615)
-            AlwaysOnTopCheckbox.Location = New System.Drawing.Point(550, 615)
             HookedLabel.Location = New System.Drawing.Point(300, 625)
             Label3.Location = New System.Drawing.Point(890, 625)
         Else
             expandCheckbox.Location = New System.Drawing.Point(105, 269)
             runModeCheckbox.Location = New System.Drawing.Point(185, 269)
-            AlwaysOnTopCheckbox.Location = New System.Drawing.Point(280, 269)
             HookedLabel.Location = New System.Drawing.Point(12, 276)
             Label3.Location = New System.Drawing.Point(420, 276)
         End If
         expandCheckbox.BringToFront()
-        AlwaysOnTopCheckbox.BringToFront()
         runModeCheckbox.BringToFront()
         HookedLabel.BringToFront()
         Label3.BringToFront()
@@ -761,8 +748,6 @@ Public Class Main
             runModeCheckbox.Refresh()
         End If
     End Sub
-
-
 
 
     Private Sub RefreshMapsListView()
@@ -991,11 +976,6 @@ Public Class Main
 
             Return
         End If
-
-    End Sub
-
-    Private Sub AlwaysOnTopManagement(sender As Object, e As EventArgs)
-        Me.TopMost = AlwaysOnTopCheckbox.Checked
     End Sub
 
     Private Sub hookTimer_Tick()

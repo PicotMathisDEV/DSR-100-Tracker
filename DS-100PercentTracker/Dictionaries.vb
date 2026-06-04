@@ -1,10 +1,13 @@
-Public Class Dictionaries
+﻿Public Class Dictionaries
 
     'Dictionary for the starting items in Asylum. Key is the starting class, values are the starting item flags
     Public Shared startingClassItems As Dictionary(Of PlayerStartingClass, Array)
 
     'Dictionary for the dropped item flags of each NPC. Key is the dead flag for each NPC, values are the dropped item flags
     Public Shared npcDroppedItems As Dictionary(Of Integer, Array)
+
+    'Fixed-location drops (mimics, DLC Sif, etc.) tracked in their zone instead of the Permanent Drops category
+    Public Shared npcZoneDroppedItems As Dictionary(Of Integer, Array)
 
     'Dictionary for the hostile flags of each NPC that isn't tied to a questline. Key is just an index, values are the hostile and dead flags
     Public Shared npcHostileDeadFlags As List(Of Array)
@@ -90,12 +93,12 @@ Public Class Dictionaries
         npcDroppedItems.Add(1513, {50006280, 50000070}) 'Siegmeyer
         npcDroppedItems.Add(11200818, {50008001, 50008000}) 'Pharis
 
-
-        npcDroppedItems.Add(11210021, {51210910}) 'Sif rescued in DLC
-        npcDroppedItems.Add(11210681, {51210921}) 'Carving Mimic in DLC
-        npcDroppedItems.Add(11210680, {51210981}) 'Crest Key Mimic in DLC
-        npcDroppedItems.Add(800, {51410990}) 'Sunlight Maggot Chaos Firebug
-        npcDroppedItems.Add(1062, {50007020}) 'Hollowed Oscar
+        'Fixed-location drops: stay tracked in their zone, not in the Permanent Drops category
+        npcZoneDroppedItems = New Dictionary(Of Integer, Array)
+        npcZoneDroppedItems.Add(11210021, {51210910}) 'Sif rescued in DLC
+        npcZoneDroppedItems.Add(11210681, {51210921}) 'Carving Mimic in DLC
+        npcZoneDroppedItems.Add(11210680, {51210981}) 'Crest Key Mimic in DLC
+        npcZoneDroppedItems.Add(800, {51410990}) 'Sunlight Maggot Chaos Firebug
 
 
         npcHostileDeadFlags = New List(Of Array)
@@ -156,6 +159,9 @@ Public Class Dictionaries
         flagToMapOverride.Add(14, "17_0")   ' Seath
         flagToMapOverride.Add(15, "18_0")   ' Gwyn 
         flagToMapOverride.Add(16, "18_1")   ' Asylum Demon
+
+        'Crest Shield (Oscar drop)
+        flagToMapOverride.Add(50007020, "18_1")
 
     End Sub
 

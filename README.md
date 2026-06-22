@@ -1,8 +1,7 @@
 # Dark Souls Remastered 100% Tracker
 
-Tracker made to keep track of all the objectives in a Dark Souls Remastered 100% speedrun. UI has been designed so that it's easy to display the tracker on stream via a color key.
+Tracker made to keep track of all the objectives in a Dark Souls Remastered 100% speedrun.
 
-Complete ruleset for 100%: https://wiki.speedsouls.com/darksouls:100%25
 
 ---
 
